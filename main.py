@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, jsonify, request
 from datetime import datetime, timedelta
 from enum import Enum
 
@@ -78,16 +78,18 @@ def get_all_rooms():
     
     result = query_api.query(org="DomoCorp", query=query)
     
-    results = set()
+    rooms_list = []
     for table in result:
         for record in table.records:
             entity_id = record["entity_id"]
             split = entity_id.split("_")
             room = split[0]
+            if not any(room_entry["name"] == room for room_entry in rooms_list):
+                rooms_list.append({
+                    "name": room
+                })
 
-            results.add(room)
-
-    return list(results)
+    return rooms_list
 
 @app.route("/getData/<sensor_id>")
 def get_data(sensor_id):
@@ -199,6 +201,78 @@ def get_sensors(room):
 
     except Exception as e:
         return {"error": str(e)}, 500
+
+@app.route("/isOccuped/<room>")
+def get_occuped(room):
+    AVERAGE_MULTIPLICATOR = 1,10
+    range = request.args.get('range', '-7d')
+
+    list_sensors = [
+       ()"co2_level"(),
+       ()"loudness"(),
+       ()"air_temperature"(),
+       ()"humidity"()
+    ]
+
+    sensor_dict = {}
+    result_dict = {}
+
+    isOccuped = True
+
+    for typeSensor in list_sensors:
+        query = f"""from(bucket: "HA_Bucket")
+                    |> range(start: {range})
+                    |> filter(fn: (r) => r["entity_id"] =~ /^{room}.*/)
+                    |> filter(fn: (r) => r["entity_id"] =~ /.*{typeSensor}.*/)
+                    |> filter(fn: (r) => r["_field"] == "value")
+                    |> group()
+                    |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)
+                    |> yield(name: "mean")"""
+        try:
+            result = query_api.query(org="DomoCorp", query=query)
+
+            count = 0
+            average = 0
+
+            for table in result:
+                if typeSensor not in sensor_dict:
+                    sensor_dict[typeSensor] = {
+                        'x': [],
+                        'y': [],
+                        }
+                
+                for record in table.records:
+                    count += 1
+                    average += record.get_value()
+
+                    sensor_dict[typeSensor]['x'].append(record.get_time().timestamp())
+                    sensor_dict[typeSensor]['y'].append(record.get_value())
+            
+            if count > 0: 
+                average /= count
+                limit = average * AVERAGE_MULTIPLICATOR
+                
+                current_dt = datetime.now()
+                dt_obj_minus_30min = current_dt - timedelta(minutes=30)
+                
+                countLast = 0
+                averageLast = 0
+                
+                for index, x in enumerate(sensor_dict[typeSensor]['x']):
+                    y = sensor_dict[typeSensor]['y'][index]
+                    if x > dt_obj_minus_30min.timestamp():
+                        countLast += 1
+                        averageLast += y
+                
+                if countLast > 0: 
+                    averageLast /= countLast
+                    isOccuped = isOccuped and averageLast > limit
+                    result_dict[typeSensor] = averageLast > limit
+
+        except Exception as e:
+            return {"error": str(e)}, 500
+    return jsonify(result_dict)
+
 
 def detect_discomfort(name, value):
     discomfort = {"status": False, "causes": []}
