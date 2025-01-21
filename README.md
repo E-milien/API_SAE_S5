@@ -1,4 +1,4 @@
-# Sensor Monitoring API
+# Sensor Monitoring API SAE 5 
 
 Une API Flask pour surveiller et analyser les données des capteurs environnementaux stockées dans InfluxDB.
 
