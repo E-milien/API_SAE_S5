@@ -4,7 +4,9 @@ Une API Flask pour surveiller et analyser les données des capteurs environnemen
 
 ## Lancement du server
 
-```flask --app main run --host=0.0.0.0```
+```shell 
+flask --app main run --host=0.0.0.0
+```
 
 ## Configuration
 
