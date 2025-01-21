@@ -13,12 +13,13 @@ client = influxdb_client.InfluxDBClient(
 
 query_api = client.query_api()
 
-@app.route("/")
-def get_sensors():
-    query = """from(bucket: "HA_Bucket")
-        |> range(start: -30d)
-        |> filter(fn: (r) => r["_field"] == "value")
-        |> group(columns: ["entity_id"])"""
+@app.route("/sensors")
+def get_all_sensors():
+    range = request.args.get('range', '-30d')
+
+    query = f"""from(bucket: "HA_Bucket")
+                |> range(start: {range})
+                |> pivot(rowKey: ["entity_id"], columnKey: ["_field"], valueColumn: "_value")"""
     
     try:
         result = query_api.query(org="DomoCorp", query=query)
@@ -30,23 +31,15 @@ def get_sensors():
                 entity_id = record.values.get('entity_id')
                 
                 if entity_id not in sensors_dict:
+                    split = entity_id.split("_")
+                    room = split[0]
                     sensors_dict[entity_id] = {
-                        'values': [],
                         'measurement': record.get_measurement(),
-                        'metadata': {}
+                        'domain': record['domain'],
+                        'friendly_name_str': record['friendly_name_str'],
+                        'room': room,
                     }
-                
-                # Ajouter la valeur avec son timestamp
-                sensors_dict[entity_id]['values'].append({
-                    'time': str(record.get_time()),
-                    'value': record.get_value()
-                })
-                
-                # Ajouter les métadonnées une seule fois
-                if not sensors_dict[entity_id]['metadata']:
-                    for key, value in record.values.items():
-                        if key not in ['_measurement', '_field', '_value', '_time', 'entity_id']:
-                            sensors_dict[entity_id]['metadata'][key] = value
+        
             
         return sensors_dict
         
@@ -54,9 +47,11 @@ def get_sensors():
         return {"error": str(e)}, 500
 
 @app.route("/rooms")
-def get_rooms():
-    query = """from(bucket: "HA_Bucket")
-                |> range(start: -30d)
+def get_all_rooms():
+    range = request.args.get('range', '-30d')
+
+    query = f"""from(bucket: "HA_Bucket")
+                |> range(start: {range})
                 |> pivot(rowKey: ["entity_id"], columnKey: ["_field"], valueColumn: "_value")"""
     
     result = query_api.query(org="DomoCorp", query=query)
@@ -72,13 +67,14 @@ def get_rooms():
 
     return list(results)
 
-@app.route("/getById/<entity_id>")
-def get_sensor(entity_id):
+@app.route("/getData/<sensor_id>")
+def get_data(sensor_id):
+    range = request.args.get('range', '-30d')
     measure = request.args.get('measure', '%')
 
     query = f"""from(bucket: "HA_Bucket")
-                |> range(start: -30d)
-                |> filter(fn: (r) => r["entity_id"] == "{entity_id}")
+                |> range(start: {range})
+                |> filter(fn: (r) => r["entity_id"] == "{sensor_id}")
                 |> filter(fn: (r) => r["_field"] == "value")
                 |> filter(fn: (r) => r["_measurement"] == "{measure}")
                 |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)
@@ -89,7 +85,6 @@ def get_sensor(entity_id):
 
         listTable = []
         for table in result:
-            print(table)
             listTable.extend(convert_flux_table_to_dict(table))
 
         if not listTable:
@@ -100,33 +95,36 @@ def get_sensor(entity_id):
     except Exception as e:
         return {"error": str(e)}, 500
 
-@app.route("/getRoom/<room>")
-def get_room(room):
-    measure = request.args.get('measure', '%')
+@app.route("/getSensors/<room>")
+def get_sensors(room):
+    range = request.args.get('range', '-30d')
 
     query = f"""from(bucket: "HA_Bucket")
-                  |> range(start: -30d)
+                  |> range(start: {range})
                   |> filter(fn: (r) => r["entity_id"] =~ /^{room}.*/)
-                  |> filter(fn: (r) => r["_field"] == "value")
-                  |> filter(fn: (r) => r["_measurement"] == "{measure}")
-                  |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)
-                  |> yield(name: "mean")"""
+                  |> filter(fn: (r) => r["_field"] == "value")"""
 
     try:
         result = query_api.query(org="DomoCorp", query=query)
 
-        listTable = []
+        list_sensors = []
         for table in result:
-            print(table)
-            listTable.extend(convert_flux_table_to_dict(table))
+            for record in table.records:
+                entity_id = record.values.get('entity_id')
+                
+                if entity_id not in list_sensors:
+                   list_sensors.append(entity_id)
+            
 
-        if not listTable:
+        if not list_sensors:
             return {"error": "No data found"}, 404
 
-        return listTable
+        return list_sensors
 
     except Exception as e:
         return {"error": str(e)}, 500
+
+
 
 def convert_flux_table_to_dict(table):
     records = []
