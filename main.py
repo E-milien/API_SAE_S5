@@ -23,6 +23,18 @@ THRESHOLDS = {
     "smoke_density": 0
 }
 
+TYPESENSOR = [
+    "air_temperature",
+    "co2_level",
+    "dew_point",
+    "humidity",
+    "volatile_organic_compound_level",
+    "illuminance",
+    "ultraviolet",
+    "loudness",
+    "smoke_density"
+]
+
 @app.route("/sensors")
 def get_all_sensors():
     range = request.args.get('range', '-30d')
@@ -140,6 +152,48 @@ def get_data(sensor_id):
 
     except Exception as e:
         return {"error": str(e)}, 500
+    
+@app.route("/getSensorByType/<room>")
+def get_data_sensors(room):
+    range = request.args.get('range', '-30d')
+
+    sensor_dict = {}
+    for typeSensor in TYPESENSOR:
+        query = f"""from(bucket: "HA_Bucket")
+                    |> range(start: {range})
+                    |> filter(fn: (r) => r["entity_id"] =~ /^{room}.*/)
+                    |> filter(fn: (r) => r["entity_id"] =~ /.*{typeSensor}.*/)
+                    |> filter(fn: (r) => r["_field"] == "value")
+                    |> group()
+                    |> aggregateWindow(every: 60m, fn: mean, createEmpty: false)
+                    |> yield(name: "mean")"""
+        try:
+            result = query_api.query(org="DomoCorp", query=query)
+
+            for table in result:
+                if typeSensor not in sensor_dict:
+                    sensor_dict[typeSensor] = {
+                        'x': [],
+                        'y': [],
+                        }
+                
+                for record in table.records:
+                    sensor_dict[typeSensor]['x'].append(record.get_time().timestamp())
+                    sensor_dict[typeSensor]['y'].append(record.get_value())
+
+            # current = datetime.now()
+            # current_delta = current - timedelta(minutes=60)
+
+            # for index, x in enumerate(sensor_dict['x']):
+            #     y = sensor_dict['y'][index]
+                
+            #     if x > current_delta.timestamp():
+            #         if not sensor_dict['discomfort']['status']:
+            #             sensor_dict['discomfort'] = detect_discomfort(sensor_id, y)
+
+        except Exception as e:
+            return {"error": str(e)}, 500
+    return sensor_dict
 
 @app.route("/getSensors/<room>")
 def get_sensors(room):
