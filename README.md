@@ -46,7 +46,7 @@ L'API utilise les seuils suivants pour détecter l'inconfort :
 Récupère tous les capteurs disponibles.
 
 **Paramètres** :
-- `range` (optionnel) : Plage de temps (défaut : '-30d')
+- `range` (optionnel) : Plage de temps (défaut 30 jours : '-30d')
 
 **Réponse** :
 ```json
@@ -64,19 +64,27 @@ Récupère tous les capteurs disponibles.
 Liste toutes les pièces disponibles.
 
 **Paramètres** :
-- `range` (optionnel) : Plage de temps (défaut : '-30d')
+- `range` (optionnel) : Plage de temps (défaut 30 jours : '-30d')
 
 **Réponse** :
 ```json
-["room1", "room2", "room3"]
+["d251", "d351"...]
 ```
 
 ### GET /getData/{sensor_id}
 Récupère les données d'un capteur spécifique.
 
 **Paramètres** :
-- `range` (optionnel) : Plage de temps (défaut : '-30d')
-- `measure` (optionnel) : Type de mesure (défaut : '%', peut être 'binary')
+- `range` (optionnel) : Plage de temps (défaut 30 jours : '-30d')
+- `measure` (optionnel) : Type de mesure :
+    - '%' (défault)
+    - 'binary'
+    - 'ppm'
+    - '°C'
+    - 'lx'
+    - 'dBA'
+    - 'UV%20index' (UV index)
+    - '%C2%B5g%2Fm%C2%B3' (µg/m³)
 
 **Réponse** :
 ```json
@@ -95,7 +103,7 @@ Récupère les données d'un capteur spécifique.
 Récupère les données de tous les capteurs d'une pièce, organisées par type.
 
 **Paramètres** :
-- `range` (optionnel) : Plage de temps (défaut : '-30d')
+- `range` (optionnel) : Plage de temps (défaut 30 jours : '-30d')
 
 **Réponse** :
 ```json
@@ -111,11 +119,11 @@ Récupère les données de tous les capteurs d'une pièce, organisées par type.
 Liste tous les capteurs d'une pièce spécifique.
 
 **Paramètres** :
-- `range` (optionnel) : Plage de temps (défaut : '-30d')
+- `range` (optionnel) : Plage de temps (défaut 30 jours : '-30d')
 
 **Réponse** :
 ```json
-["sensor_id1", "sensor_id2"]
+["d351_1_multisensor_humidity", "d251_1_co2_carbon_dioxide_co2_level"]
 ```
 
 ## Gestion des erreurs
@@ -135,14 +143,8 @@ Chaque erreur inclut un message explicatif :
 
 ```python
 # Récupérer les données de température d'une pièce sur les dernières 24h
-GET /getData/bedroom_temperature?range=-24h&measure=temperature
+GET /getData/d251?range=-24h&measure=°C
 
 # Lister tous les capteurs d'une pièce
-GET /getSensors/bedroom
+GET /getSensors/d351_1_multisensor_humidity
 ```
-
-## Note sur l'agrégation des données
-
-- Les données binaires sont agrégées toutes les 10 minutes avec la dernière valeur
-- Les autres mesures sont agrégées toutes les minutes avec la moyenne
-- Pour la détection d'inconfort, seule la dernière heure est analysée
