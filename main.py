@@ -208,10 +208,10 @@ def get_occuped(room):
     range = request.args.get('range', '-7d')
 
     list_sensors = [
-       ()"co2_level"(),
-       ()"loudness"(),
-       ()"air_temperature"(),
-       ()"humidity"()
+       "co2_level",
+       "loudness",
+       "air_temperature",
+       "humidity"
     ]
 
     sensor_dict = {}
