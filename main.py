@@ -134,20 +134,6 @@ def get_data(sensor_id):
                 if not sensor_dict['discomfort']['status']:
                     sensor_dict['discomfort'] = detect_discomfort(sensor_id, y)
 
-
-        # average /= count
-        # limit = average * 1.20
-        
-        # current_dt = datetime.now()
-        # dt_obj_minus_30min = current_dt - timedelta(minutes=30)
-
-        # for index, value in enumerate(sensor_dict['x']):
-        #     y = sensor_dict['y'][index]
-        #     if value > dt_obj_minus_30min.timestamp() and y > limit:
-        #         sensor_dict['exceed'].append((value, y))
-        # sensor_dict['average'] = average
-        # sensor_dict['limit'] = limit
-
         return sensor_dict
 
     except Exception as e:
@@ -181,16 +167,6 @@ def get_data_sensors(room):
                     sensor_dict[typeSensor]['x'].append(record.get_time().timestamp())
                     sensor_dict[typeSensor]['y'].append(record.get_value())
 
-            # current = datetime.now()
-            # current_delta = current - timedelta(minutes=60)
-
-            # for index, x in enumerate(sensor_dict['x']):
-            #     y = sensor_dict['y'][index]
-                
-            #     if x > current_delta.timestamp():
-            #         if not sensor_dict['discomfort']['status']:
-            #             sensor_dict['discomfort'] = detect_discomfort(sensor_id, y)
-
         except Exception as e:
             return {"error": str(e)}, 500
     return sensor_dict
@@ -223,24 +199,6 @@ def get_sensors(room):
 
     except Exception as e:
         return {"error": str(e)}, 500
-
-def convert_flux_table_to_dict(table):
-    records = []
-    for record in table.records:
-        record_dict = {
-            'measurement': record.get_measurement(),
-            'field': record.get_field(),
-            'value': record.get_value(),
-            'time': record.get_time(),
-        }
-
-        for key, value in record.values.items():
-            if key not in ['_measurement', '_field', '_value', '_time']:
-                record_dict[key] = value
-
-        records.append(record_dict)
-    return records
-
 
 def detect_discomfort(name, value):
     discomfort = {"status": False, "causes": []}
