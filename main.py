@@ -15,12 +15,13 @@ client = influxdb_client.InfluxDBClient(
 
 query_api = client.query_api()
 
-SENSOR_TYPE = [
-    'humidity',
-    'co2_level',
-    'loudness',
-    'temperature'
-]
+THRESHOLDS = {
+    "co2_level": 1000,  # ppm
+    "temperature": (20, 26),  # Plage acceptable : [20°C, 26°C]
+    "humidity": (30, 60),  # Plage acceptable : [30%, 60%]
+    "loudness": 50,  # dB
+    "smoke_density": 0
+}
 
 @app.route("/sensors")
 def get_all_sensors():
@@ -80,8 +81,15 @@ def get_all_rooms():
 def get_data(sensor_id):
     range = request.args.get('range', '-30d')
     measure = request.args.get('measure', '%')
-
-    query = f"""from(bucket: "HA_Bucket")
+    if measure == "binary":
+        query = f"""from(bucket: "HA_Bucket")
+                |> range(start: {range})
+                |> filter(fn: (r) => r["entity_id"] == "{sensor_id}")
+                |> filter(fn: (r) => r["_field"] == "value")
+                |> aggregateWindow(every: 10m, fn: last, createEmpty: false)
+                |> yield(name: "last")"""
+    else:
+        query = f"""from(bucket: "HA_Bucket")
                 |> range(start: {range})
                 |> filter(fn: (r) => r["entity_id"] == "{sensor_id}")
                 |> filter(fn: (r) => r["_field"] == "value")
@@ -95,35 +103,39 @@ def get_data(sensor_id):
         sensor_dict = {
             'x': [],
             'y': [],
-            'exceed': [] 
+            'discomfort': {"status": False, "causes": []}
         }
-
-        count = 0
-        average = 0
 
         for table in result:
             for record in table.records:
-                count += 1
-                average += record.get_value()
                 sensor_dict['x'].append(record.get_time().timestamp())
                 sensor_dict['y'].append(record.get_value())
                 sensor_dict['measurement'] = record.get_measurement()
 
-        average /= count
-        limit = average * 1.20
-        
+        current = datetime.now()
+        current_delta = current - timedelta(minutes=60)
 
-        current_dt = datetime.now()
-        dt_obj_minus_30min = current_dt - timedelta(minutes=30)
-
-        for index, value in enumerate(sensor_dict['x']):
+        for index, x in enumerate(sensor_dict['x']):
             y = sensor_dict['y'][index]
-            if value > dt_obj_minus_30min.timestamp() and y > limit:
-                sensor_dict['exceed'].append((value, y))
+            
+            if x > current_delta.timestamp():
+                if not sensor_dict['discomfort']['status']:
+                    sensor_dict['discomfort'] = detect_discomfort(sensor_id, y)
 
 
-        sensor_dict['average'] = average
-        sensor_dict['limit'] = limit
+        # average /= count
+        # limit = average * 1.20
+        
+        # current_dt = datetime.now()
+        # dt_obj_minus_30min = current_dt - timedelta(minutes=30)
+
+        # for index, value in enumerate(sensor_dict['x']):
+        #     y = sensor_dict['y'][index]
+        #     if value > dt_obj_minus_30min.timestamp() and y > limit:
+        #         sensor_dict['exceed'].append((value, y))
+        # sensor_dict['average'] = average
+        # sensor_dict['limit'] = limit
+
         return sensor_dict
 
     except Exception as e:
@@ -158,8 +170,6 @@ def get_sensors(room):
     except Exception as e:
         return {"error": str(e)}, 500
 
-
-
 def convert_flux_table_to_dict(table):
     records = []
     for record in table.records:
@@ -176,3 +186,38 @@ def convert_flux_table_to_dict(table):
 
         records.append(record_dict)
     return records
+
+
+def detect_discomfort(name, value):
+    discomfort = {"status": False, "causes": []}
+
+    if 'co2_level' in name:
+        if value > THRESHOLDS["co2_level"]:
+            discomfort["status"] = True
+            discomfort["causes"].append("CO2 élevé")
+
+    if 'temperature' in name:
+        temp = value
+        if temp is not None and (temp < THRESHOLDS["temperature"][0] or temp > THRESHOLDS["temperature"][1]):
+            discomfort["status"] = True
+            discomfort["causes"].append("Température inconfortable")
+
+    if 'humidity' in name:
+        humidity = value
+        if humidity is not None and (humidity < THRESHOLDS["humidity"][0] or humidity > THRESHOLDS["humidity"][1]):
+            discomfort["status"] = True
+            discomfort["causes"].append("Humidité inconfortable")
+
+    if 'loudness' in name:
+        noise = value
+        if noise > THRESHOLDS["loudness"]:
+            discomfort["status"] = True
+            discomfort["causes"].append("Niveau de bruit élevé")
+
+    if 'smoke_density' in name:
+        noise = value
+        if noise > THRESHOLDS["smoke_density"]:
+            discomfort["smoke_density"] = True
+            discomfort["causes"].append("Fumée détectée")
+
+    return discomfort
