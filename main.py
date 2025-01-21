@@ -1,4 +1,6 @@
 from flask import Flask, request
+from datetime import datetime, timedelta
+from enum import Enum
 
 import influxdb_client
 from influxdb_client.client.write_api import SYNCHRONOUS
@@ -12,6 +14,13 @@ client = influxdb_client.InfluxDBClient(
 )
 
 query_api = client.query_api()
+
+SENSOR_TYPE = [
+    'humidity',
+    'co2_level',
+    'loudness',
+    'temperature'
+]
 
 @app.route("/sensors")
 def get_all_sensors():
@@ -83,14 +92,39 @@ def get_data(sensor_id):
     try:
         result = query_api.query(org="DomoCorp", query=query)
 
-        listTable = []
+        sensor_dict = {
+            'x': [],
+            'y': [],
+            'exceed': [] 
+        }
+
+        count = 0
+        average = 0
+
         for table in result:
-            listTable.extend(convert_flux_table_to_dict(table))
+            for record in table.records:
+                count += 1
+                average += record.get_value()
+                sensor_dict['x'].append(record.get_time().timestamp())
+                sensor_dict['y'].append(record.get_value())
+                sensor_dict['measurement'] = record.get_measurement()
 
-        if not listTable:
-            return {"error": "No data found"}, 404
+        average /= count
+        limit = average * 1.20
+        
 
-        return listTable
+        current_dt = datetime.now()
+        dt_obj_minus_30min = current_dt - timedelta(minutes=30)
+
+        for index, value in enumerate(sensor_dict['x']):
+            y = sensor_dict['y'][index]
+            if value > dt_obj_minus_30min.timestamp() and y > limit:
+                sensor_dict['exceed'].append((value, y))
+
+
+        sensor_dict['average'] = average
+        sensor_dict['limit'] = limit
+        return sensor_dict
 
     except Exception as e:
         return {"error": str(e)}, 500
