@@ -2,6 +2,10 @@
 
 Une API Flask pour surveiller et analyser les données des capteurs environnementaux stockées dans InfluxDB.
 
+## Lancement du server
+
+```flask --app main run --host=0.0.0.0```
+
 ## Configuration
 
 L'API utilise les technologies suivantes :
