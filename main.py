@@ -152,6 +152,7 @@ def get_data_sensors(room):
                     sensor_dict[typeSensor] = {
                         'x': [],
                         'y': [],
+                        'discomfort': {"status": False}
                         }
                 
                 for record in table.records:
@@ -272,7 +273,7 @@ def get_occuped(room):
 
 
 def detect_discomfort(name, value):
-    discomfort = {"status": False, "causes": []}
+    discomfort = {"status": False}
 
     if 'co2_level' in name:
         if value > THRESHOLDS["co2_level"]:
