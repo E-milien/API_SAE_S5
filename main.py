@@ -106,7 +106,7 @@ def get_data(sensor_id):
         sensor_dict = {
             'x': [],
             'y': [],
-            'discomfort': {"status": False, "causes": []}
+            'discomfort': {"status": False}
         }
 
         for table in result:
@@ -157,9 +157,17 @@ def get_data_sensors(room):
                 for record in table.records:
                     sensor_dict[typeSensor]['x'].append(record.get_time().timestamp())
                     sensor_dict[typeSensor]['y'].append(record.get_value())
+                    
+                    current = datetime.now()
+                    current_delta = current - timedelta(minutes=60)
 
+                    if record.get_time().timestamp() > current_delta.timestamp():
+                        sensor_dict[typeSensor]['discomfort'] = detect_discomfort(typeSensor, record.get_value())
+            
+    
         except Exception as e:
             return {"error": str(e)}, 500
+    
     return sensor_dict
 
 @app.route("/getSensors/<room>")
@@ -269,30 +277,26 @@ def detect_discomfort(name, value):
     if 'co2_level' in name:
         if value > THRESHOLDS["co2_level"]:
             discomfort["status"] = True
-            discomfort["causes"].append("CO2 élevé")
+            discomfort["causes"] = "CO2 élevé"
 
     if 'temperature' in name:
-        temp = value
-        if temp is not None and (temp < THRESHOLDS["temperature"][0] or temp > THRESHOLDS["temperature"][1]):
+        if value is not None and (value < THRESHOLDS["temperature"][0] or value > THRESHOLDS["temperature"][1]):
             discomfort["status"] = True
-            discomfort["causes"].append("Température inconfortable")
+            discomfort["causes"] = "Température inconfortable"
 
     if 'humidity' in name:
-        humidity = value
-        if humidity is not None and (humidity < THRESHOLDS["humidity"][0] or humidity > THRESHOLDS["humidity"][1]):
+        if value is not None and (value < THRESHOLDS["humidity"][0] or value > THRESHOLDS["humidity"][1]):
             discomfort["status"] = True
-            discomfort["causes"].append("Humidité inconfortable")
+            discomfort["causes"] = "Humidité inconfortable"
 
     if 'loudness' in name:
-        noise = value
-        if noise > THRESHOLDS["loudness"]:
+        if value > THRESHOLDS["loudness"]:
             discomfort["status"] = True
-            discomfort["causes"].append("Niveau de bruit élevé")
+            discomfort["causes"] = "Niveau de bruit élevé"
 
     if 'smoke_density' in name:
-        noise = value
-        if noise > THRESHOLDS["smoke_density"]:
-            discomfort["smoke_density"] = True
-            discomfort["causes"].append("Fumée détectée")
+        if value > THRESHOLDS["smoke_density"]:
+            discomfort["status"] = True
+            discomfort["causes"] = "Fumée détectée"
 
     return discomfort
