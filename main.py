@@ -91,7 +91,7 @@ def get_all_rooms():
     return jsonify(rooms_list), 200
 
 @app.route("/api/room/<room>/sensor-list")
-def get_all_sensors(room):
+def get_sensors_by_room(room):
     range = request.args.get('range', '-30d')
 
     query = f"""from(bucket: "HA_Bucket")
