@@ -82,15 +82,6 @@ Récupère les données d'un capteur spécifique.
 
 **Paramètres** :
 - `range` (optionnel) : Plage de temps (défaut 30 jours : '-30d')
-- `measure` (optionnel) : Type de mesure :
-    - '%' (défault)
-    - 'binary'
-    - 'ppm'
-    - '°C'
-    - 'lx'
-    - 'dBA'
-    - 'UV%20index' (UV index)
-    - '%C2%B5g%2Fm%C2%B3' (µg/m³)
 
 **Réponse** :
 ```json

@@ -1,6 +1,5 @@
 from flask import Flask, jsonify, request
 from datetime import datetime, timedelta
-from enum import Enum
 
 import influxdb_client
 from influxdb_client.client.write_api import SYNCHRONOUS
@@ -16,10 +15,10 @@ client = influxdb_client.InfluxDBClient(
 query_api = client.query_api()
 
 THRESHOLDS = {
-    "co2_level": 1000,  # ppm
-    "temperature": (20, 26),  # Plage acceptable : [20°C, 26°C]
-    "humidity": (30, 60),  # Plage acceptable : [30%, 60%]
-    "loudness": 50,  # dB
+    "co2_level": 1000,
+    "temperature": (20, 26),
+    "humidity": (30, 60),
+    "loudness": 50,
     "smoke_density": 0
 }
 
@@ -94,22 +93,12 @@ def get_all_rooms():
 @app.route("/getData/<sensor_id>")
 def get_data(sensor_id):
     range = request.args.get('range', '-30d')
-    measure = request.args.get('measure', '%')
-    if measure == "binary":
-        query = f"""from(bucket: "HA_Bucket")
+    query = f"""from(bucket: "HA_Bucket")
                 |> range(start: {range})
                 |> filter(fn: (r) => r["entity_id"] == "{sensor_id}")
                 |> filter(fn: (r) => r["_field"] == "value")
                 |> aggregateWindow(every: 10m, fn: last, createEmpty: false)
                 |> yield(name: "last")"""
-    else:
-        query = f"""from(bucket: "HA_Bucket")
-                |> range(start: {range})
-                |> filter(fn: (r) => r["entity_id"] == "{sensor_id}")
-                |> filter(fn: (r) => r["_field"] == "value")
-                |> filter(fn: (r) => r["_measurement"] == "{measure}")
-                |> aggregateWindow(every: 1m, fn: mean, createEmpty: false)
-                |> yield(name: "mean")"""
 
     try:
         result = query_api.query(org="DomoCorp", query=query)
