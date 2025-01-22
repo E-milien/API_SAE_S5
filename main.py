@@ -34,7 +34,7 @@ TYPESENSOR = [
     "smoke_density"
 ]
 
-@app.route("/sensors")
+@app.route("/api/sensors")
 def get_all_sensors():
     range = request.args.get('range', '-30d')
 
@@ -62,12 +62,12 @@ def get_all_sensors():
                     }
         
             
-        return sensors_dict
+        return jsonify(sensors_dict), 200
         
     except Exception as e:
         return {"error": str(e)}, 500
 
-@app.route("/rooms")
+@app.route("/api/rooms")
 def get_all_rooms():
     range = request.args.get('range', '-30d')
 
@@ -88,91 +88,10 @@ def get_all_rooms():
                     "name": room
                 })
 
-    return rooms_list
+    return jsonify(rooms_list), 200
 
-@app.route("/getData/<sensor_id>")
-def get_data(sensor_id):
-    range = request.args.get('range', '-30d')
-    query = f"""from(bucket: "HA_Bucket")
-                |> range(start: {range})
-                |> filter(fn: (r) => r["entity_id"] == "{sensor_id}")
-                |> filter(fn: (r) => r["_field"] == "value")
-                |> aggregateWindow(every: 10m, fn: last, createEmpty: false)
-                |> yield(name: "last")"""
-
-    try:
-        result = query_api.query(org="DomoCorp", query=query)
-
-        sensor_dict = {
-            'x': [],
-            'y': [],
-            'discomfort': {"status": False}
-        }
-
-        for table in result:
-            for record in table.records:
-                sensor_dict['x'].append(record.get_time().timestamp())
-                sensor_dict['y'].append(record.get_value())
-                sensor_dict['measurement'] = record.get_measurement()
-
-        current = datetime.now()
-        current_delta = current - timedelta(minutes=60)
-
-        for index, x in enumerate(sensor_dict['x']):
-            y = sensor_dict['y'][index]
-            
-            if x > current_delta.timestamp():
-                if not sensor_dict['discomfort']['status']:
-                    sensor_dict['discomfort'] = detect_discomfort(sensor_id, y)
-
-        return sensor_dict
-
-    except Exception as e:
-        return {"error": str(e)}, 500
-    
-@app.route("/getSensorByType/<room>")
-def get_data_sensors(room):
-    range = request.args.get('range', '-30d')
-
-    sensor_dict = {}
-    for typeSensor in TYPESENSOR:
-        query = f"""from(bucket: "HA_Bucket")
-                    |> range(start: {range})
-                    |> filter(fn: (r) => r["entity_id"] =~ /^{room}.*/)
-                    |> filter(fn: (r) => r["entity_id"] =~ /.*{typeSensor}.*/)
-                    |> filter(fn: (r) => r["_field"] == "value")
-                    |> group()
-                    |> aggregateWindow(every: 60m, fn: mean, createEmpty: false)
-                    |> yield(name: "mean")"""
-        try:
-            result = query_api.query(org="DomoCorp", query=query)
-
-            for table in result:
-                if typeSensor not in sensor_dict:
-                    sensor_dict[typeSensor] = {
-                        'x': [],
-                        'y': [],
-                        'discomfort': {"status": False}
-                        }
-                
-                for record in table.records:
-                    sensor_dict[typeSensor]['x'].append(record.get_time().timestamp())
-                    sensor_dict[typeSensor]['y'].append(record.get_value())
-                    
-                    current = datetime.now()
-                    current_delta = current - timedelta(minutes=60)
-
-                    if record.get_time().timestamp() > current_delta.timestamp():
-                        sensor_dict[typeSensor]['discomfort'] = detect_discomfort(typeSensor, record.get_value())
-            
-    
-        except Exception as e:
-            return {"error": str(e)}, 500
-    
-    return sensor_dict
-
-@app.route("/getSensors/<room>")
-def get_sensors(room):
+@app.route("/api/room/<room>/sensor-list")
+def get_all_sensors(room):
     range = request.args.get('range', '-30d')
 
     query = f"""from(bucket: "HA_Bucket")
@@ -195,14 +114,102 @@ def get_sensors(room):
         if not list_sensors:
             return {"error": "No data found"}, 404
 
-        return list_sensors
+        return jsonify(list_sensors), 200
 
     except Exception as e:
         return {"error": str(e)}, 500
 
-@app.route("/isOccuped/<room>")
-def get_occuped(room):
-    AVERAGE_MULTIPLICATOR = 1,10
+@app.route("/api/sensor/<sensor_id>")
+def get_data_by_sensor_id(sensor_id):
+    range = request.args.get('range', '-30d')
+    query = f"""from(bucket: "HA_Bucket")
+                |> range(start: {range})
+                |> filter(fn: (r) => r["entity_id"] == "{sensor_id}")
+                |> filter(fn: (r) => r["_field"] == "value")
+                |> aggregateWindow(every: 10m, fn: last, createEmpty: false)
+                |> yield(name: "last")"""
+
+    try:
+        result = query_api.query(org="DomoCorp", query=query)
+
+        sensor_dict = {
+            'measurement': "",
+            'discomfort': {
+                "status": False,
+                "causes": None
+                },
+            'x': [],
+            'y': []
+        }
+
+        for table in result:
+            for record in table.records:
+                sensor_dict['x'].append(record.get_time().timestamp())
+                sensor_dict['y'].append(record.get_value())
+                sensor_dict['measurement'] = record.get_measurement()
+
+        current = datetime.now()
+        current_delta = current - timedelta(minutes=60)
+
+        for index, x in enumerate(sensor_dict['x']):
+            y = sensor_dict['y'][index]
+            
+            if x > current_delta.timestamp():
+                if not sensor_dict['discomfort']['status']:
+                    sensor_dict['discomfort'] = detect_discomfort(sensor_id, y)
+
+        return jsonify(sensor_dict), 200
+
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+@app.route("/api/room/<room>/sensors")
+def get_data_sensors_by_room(room):
+    range = request.args.get('range', '-30d')
+
+    sensor_dict = {}
+    for typeSensor in TYPESENSOR:
+        query = f"""from(bucket: "HA_Bucket")
+                    |> range(start: {range})
+                    |> filter(fn: (r) => r["entity_id"] =~ /^{room}.*/)
+                    |> filter(fn: (r) => r["entity_id"] =~ /.*{typeSensor}.*/)
+                    |> filter(fn: (r) => r["_field"] == "value")
+                    |> group()
+                    |> aggregateWindow(every: 60m, fn: mean, createEmpty: false)
+                    |> yield(name: "mean")"""
+        try:
+            result = query_api.query(org="DomoCorp", query=query)
+
+            for table in result:
+                if typeSensor not in sensor_dict:
+                    sensor_dict[typeSensor] = {
+                        'x': [],
+                        'y': [],
+                        'discomfort': {
+                            "status": False,
+                            "causes": None
+                            }
+                        }
+                
+                for record in table.records:
+                    sensor_dict[typeSensor]['x'].append(record.get_time().timestamp())
+                    sensor_dict[typeSensor]['y'].append(record.get_value())
+                    
+                    current = datetime.now()
+                    current_delta = current - timedelta(minutes=60)
+
+                    if record.get_time().timestamp() > current_delta.timestamp():
+                        sensor_dict[typeSensor]['discomfort'] = detect_discomfort(typeSensor, record.get_value())
+            
+    
+        except Exception as e:
+            return {"error": str(e)}, 500
+    
+    return jsonify(sensor_dict), 200
+
+@app.route("/api/room/<room>/occupancy")
+def get_room_occuped(room):
+    AVERAGE_MULTIPLICATOR = 1.10
     range = request.args.get('range', '-7d')
 
     list_sensors = [
@@ -213,8 +220,6 @@ def get_occuped(room):
     ]
 
     sensor_dict = {}
-    result_dict = {}
-
     isOccuped = True
 
     for typeSensor in list_sensors:
@@ -231,6 +236,7 @@ def get_occuped(room):
 
             count = 0
             average = 0
+            # result_dict = {}
 
             for table in result:
                 if typeSensor not in sensor_dict:
@@ -265,37 +271,36 @@ def get_occuped(room):
                 if countLast > 0: 
                     averageLast /= countLast
                     isOccuped = isOccuped and averageLast > limit
-                    result_dict[typeSensor] = averageLast > limit
+                    # result_dict[typeSensor] = averageLast > limit
 
         except Exception as e:
             return {"error": str(e)}, 500
-    return jsonify(result_dict)
-
+    return jsonify({"isOccuped": isOccuped})
 
 def detect_discomfort(name, value):
-    discomfort = {"status": False}
+    discomfort = {"status": False, "causes": None}
 
     if 'co2_level' in name:
         if value > THRESHOLDS["co2_level"]:
             discomfort["status"] = True
             discomfort["causes"] = "CO2 élevé"
 
-    if 'temperature' in name:
+    elif 'temperature' in name:
         if value is not None and (value < THRESHOLDS["temperature"][0] or value > THRESHOLDS["temperature"][1]):
             discomfort["status"] = True
             discomfort["causes"] = "Température inconfortable"
 
-    if 'humidity' in name:
+    elif 'humidity' in name:
         if value is not None and (value < THRESHOLDS["humidity"][0] or value > THRESHOLDS["humidity"][1]):
             discomfort["status"] = True
             discomfort["causes"] = "Humidité inconfortable"
 
-    if 'loudness' in name:
+    elif 'loudness' in name:
         if value > THRESHOLDS["loudness"]:
             discomfort["status"] = True
             discomfort["causes"] = "Niveau de bruit élevé"
 
-    if 'smoke_density' in name:
+    elif 'smoke_density' in name:
         if value > THRESHOLDS["smoke_density"]:
             discomfort["status"] = True
             discomfort["causes"] = "Fumée détectée"

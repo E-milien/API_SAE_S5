@@ -48,11 +48,11 @@ L'API utilise les seuils suivants pour détecter l'inconfort :
 
 ## Endpoints
 
-### GET /sensors
+### GET /api/sensors
 Récupère tous les capteurs disponibles.
 
 **Paramètres** :
-- `range` (optionnel) : Plage de temps (défaut 30 jours : '-30d')
+- `range` (optionnel) : Plage de temps (défaut : '-30d')
 
 **Réponse** :
 ```json
@@ -66,66 +66,94 @@ Récupère tous les capteurs disponibles.
 }
 ```
 
-### GET /rooms
+### GET /api/rooms
 Liste toutes les pièces disponibles.
 
 **Paramètres** :
-- `range` (optionnel) : Plage de temps (défaut 30 jours : '-30d')
+- `range` (optionnel) : Plage de temps (défaut : '-30d')
 
 **Réponse** :
 ```json
-["d251", "d351"...]
+[
+    {
+        "name": "d251"
+    },
+    {
+        "name": "d351"
+    }
+]
 ```
 
-### GET /getData/{sensor_id}
+### GET /api/sensor/{sensor_id}
 Récupère les données d'un capteur spécifique.
 
 **Paramètres** :
-- `range` (optionnel) : Plage de temps (défaut 30 jours : '-30d')
+- `range` (optionnel) : Plage de temps (défaut : '-30d')
 
 **Réponse** :
 ```json
 {
-    "x": [timestamps],
-    "y": [values],
     "measurement": "string",
     "discomfort": {
         "status": boolean,
-        "causes": ["string"]
-    }
+        "causes": "string"
+    },
+    "x": [timestamps],
+    "y": [values]
 }
 ```
 
-### GET /getSensorByType/{room}
+### GET /api/room/{room}/sensors
 Récupère les données de tous les capteurs d'une pièce, organisées par type.
 
 **Paramètres** :
-- `range` (optionnel) : Plage de temps (défaut 30 jours : '-30d')
+- `range` (optionnel) : Plage de temps (défaut : '-30d')
 
 **Réponse** :
 ```json
 {
     "sensor_type": {
         "x": [timestamps],
-        "y": [values]
+        "y": [values],
+        "discomfort": {
+            "status": boolean,
+            "causes": "string"
+        }
     }
 }
 ```
 
-### GET /getSensors/{room}
+### GET /api/room/{room}/sensor-list
 Liste tous les capteurs d'une pièce spécifique.
 
 **Paramètres** :
-- `range` (optionnel) : Plage de temps (défaut 30 jours : '-30d')
+- `range` (optionnel) : Plage de temps (défaut : '-30d')
 
 **Réponse** :
 ```json
-["d351_1_multisensor_humidity", "d251_1_co2_carbon_dioxide_co2_level"]
+[
+    "d351_1_multisensor_humidity",
+    "d251_1_co2_carbon_dioxide_co2_level"
+]
+```
+
+### GET /api/room/{room}/occupancy
+Vérifie si une pièce est occupée.
+
+**Paramètres** :
+- `range` (optionnel) : Plage de temps (défaut : '-7d')
+
+**Réponse** :
+```json
+{
+    "isOccuped": boolean
+}
 ```
 
 ## Gestion des erreurs
 
 L'API renvoie des codes d'erreur HTTP appropriés :
+- 200 : Succès
 - 404 : Données non trouvées
 - 500 : Erreur serveur
 
@@ -139,9 +167,19 @@ Chaque erreur inclut un message explicatif :
 ## Exemple d'utilisation
 
 ```python
-# Récupérer les données de température d'une pièce sur les dernières 24h
-GET /getData/d251?range=-24h&measure=°C
+# Récupérer les données d'un capteur sur les dernières 24h
+GET /api/sensor/d251_1_multisensor_temperature?range=-24h
 
 # Lister tous les capteurs d'une pièce
-GET /getSensors/d351_1_multisensor_humidity
+GET /api/room/d251/sensor-list
+
+# Vérifier l'occupation d'une pièce
+GET /api/room/d251/occupancy
 ```
+
+## Note sur l'agrégation des données
+
+- Les données de capteurs individuels sont agrégées toutes les 10 minutes
+- Les données par type de capteur sont agrégées toutes les 60 minutes
+- Pour la détection d'occupation, les données sont agrégées toutes les minutes
+- Pour la détection d'inconfort, seule la dernière heure est analysée
