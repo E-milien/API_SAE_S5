@@ -174,7 +174,7 @@ def get_data_sensors_by_room(room):
                     |> filter(fn: (r) => r["entity_id"] =~ /^{room}.*/)
                     |> filter(fn: (r) => r["entity_id"] =~ /.*{typeSensor}.*/)
                     |> filter(fn: (r) => r["_field"] == "value")
-                    |> group()
+                    |> group(columns: ["_measurement"])
                     |> aggregateWindow(every: 60m, fn: mean, createEmpty: false)
                     |> yield(name: "mean")"""
         try:
