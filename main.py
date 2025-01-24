@@ -185,6 +185,7 @@ def get_data_sensors_by_room(room):
                     sensor_dict[typeSensor] = {
                         'x': [],
                         'y': [],
+                        'measurement': None,
                         'discomfort': {
                             "status": False,
                             "causes": None
@@ -194,6 +195,7 @@ def get_data_sensors_by_room(room):
                 for record in table.records:
                     sensor_dict[typeSensor]['x'].append(record.get_time().timestamp())
                     sensor_dict[typeSensor]['y'].append(record.get_value())
+                    sensor_dict[typeSensor]['measurement'] = record.get_measurement()
                     
                     current = datetime.now()
                     current_delta = current - timedelta(minutes=60)

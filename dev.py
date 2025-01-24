@@ -5,7 +5,7 @@ import time
 
 app = Flask(__name__)
 
-MOCK_ROOMS = ["d251", "d351", "D360"]
+MOCK_ROOMS = ["d251", "d351", "d360"]
 
 def generate_sensor_data(sensor_type, days=30):
     data = {
