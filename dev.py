@@ -5,7 +5,7 @@ import time
 
 app = Flask(__name__)
 
-MOCK_ROOMS = ["d251", "d351", "D360"]
+MOCK_ROOMS = ["d251", "d351", "d360"]
 
 def generate_sensor_data(sensor_type, days=30):
     data = {
@@ -180,4 +180,4 @@ def detect_discomfort(name, value):
     return discomfort
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)
