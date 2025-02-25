@@ -218,21 +218,26 @@ def detect_discomfort(name, value):
     discomfort = {"status": False, "causes": None}
 
     if 'co2_level' in name:
-        if random.randint(0,1)==1:
+        if value > THRESHOLDS["co2_level"]:
             discomfort["status"] = True
             discomfort["causes"] = "CO2 élevé"
-    elif random.randint(0,1)==1:
+    elif 'air_temperature' in name:
         if value < THRESHOLDS["temperature"][0] or value > THRESHOLDS["temperature"][1]:
             discomfort["status"] = True
             discomfort["causes"] = "Température inconfortable"
-    elif random.randint(0,1)==1:
+    elif 'humidity' in name:
         if value < THRESHOLDS["humidity"][0] or value > THRESHOLDS["humidity"][1]:
             discomfort["status"] = True
             discomfort["causes"] = "Humidité inconfortable"
-    elif random.randint(0,1)==1:
+    elif 'loudness' in name:
         if value > THRESHOLDS["loudness"]:
             discomfort["status"] = True
             discomfort["causes"] = "Niveau de bruit élevé"
+    elif 'smoke_density' in name: 
+        if value > THRESHOLDS["smoke_density"]:
+            discomfort["status"] = True
+            discomfort["causes"] = "Densité de fumée trop élevé"
+
 
     return discomfort
 
