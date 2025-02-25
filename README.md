@@ -18,7 +18,7 @@ L'API utilise les technologies suivantes :
 ### Variables d'environnement
 L'API se connecte à InfluxDB avec les paramètres suivants :
 ```python
-url="http://votre_ip:5001"
+url="http://10.103.1.44:5003"
 org="DomoCorp"
 ```
 
