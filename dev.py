@@ -19,46 +19,6 @@ THRESHOLDS = {
     "smoke_density": 0
 }
 
-def generate_sensor_data(sensor_type, days=30):
-    data = {
-        'x': [],
-        'y': []
-    }
-    
-    end_time = time.time()
-    start_time = end_time - (days * 24 * 60 * 60)
-    
-    current_time = start_time
-    while current_time < end_time:
-        data['x'].append(current_time)
-        
-        value = 0
-        if sensor_type == "air_temperature":
-            value = random.randint(18, 28)
-        elif sensor_type == "humidity":
-            value = random.randint(25, 65)
-        elif sensor_type == "co2_level":
-            value = random.randint(400, 1200)
-        elif sensor_type == "loudness":
-            value = random.randint(30, 70)
-        elif sensor_type == "dew_point":
-            value = random.randint(5, 15)
-        elif sensor_type == "volatile_organic_compound_level":
-            value = random.randint(0, 1000)
-        elif sensor_type == "illuminance":
-            value = random.randint(0, 1000)
-        elif sensor_type == "ultraviolet":
-            value = random.randint(0, 11)
-        elif sensor_type == "smoke_density":
-            value = random.randint(0, 5)
-        elif sensor_type == "binary":
-            value = random.randint(0, 1)
-        
-        data['y'].append(value)
-        current_time += 3600
-
-    return data
-
 TYPESENSOR = [
     ("air_temperature", "°C"),
     ("co2_level", "ppm"),
@@ -85,41 +45,6 @@ TETRAS_SENSORS = {
         for sensor_type, _ in TYPESENSOR
     } for room in TETRAS_ROOMS
 }
-
-def get_sensors_list_for_room(room, location):
-    if location == IUT_LOCATION:
-        if room not in IUT_ROOMS:
-            return None
-        return list(IUT_SENSORS[room].keys())
-    else: 
-        if room not in TETRAS_ROOMS:
-            return None
-        return list(TETRAS_SENSORS[room].keys())
-
-def get_sensor_data(sensor_id, location):
-    if location == IUT_LOCATION:
-        room = next((room for room in IUT_ROOMS if sensor_id.startswith(room)), None)
-        if not room or sensor_id not in IUT_SENSORS[room]:
-            return None
-    else:
-        room = next((room for room in TETRAS_ROOMS if sensor_id.startswith(room)), None)
-        if not room or sensor_id not in TETRAS_SENSORS[room]:
-            return None
-    
-    sensor_type = sensor_id.split('_', 1)[1]
-    measurement = next((m for t, m in TYPESENSOR if t == sensor_type), None)
-    
-    if measurement is None:
-        return None
-        
-    data = generate_sensor_data(sensor_type)
-    
-    return {
-        'measurement': measurement,
-        'discomfort': detect_discomfort(sensor_id, data['y'][-1]),
-        'x': data['x'],
-        'y': data['y']
-    }
 
 @app.route("/api/sensors")
 def get_all_sensors():
@@ -213,6 +138,81 @@ def get_room_occuped(room):
         if TETRAS_ROOMS.index(room) % 2 == 1:
             is_occupied = True
     return jsonify(is_occupied), 200
+
+def generate_sensor_data(sensor_type, days=30):
+    data = {
+        'x': [],
+        'y': []
+    }
+    
+    end_time = time.time()
+    start_time = end_time - (days * 24 * 60 * 60)
+    
+    current_time = start_time
+    while current_time < end_time:
+        data['x'].append(current_time)
+        
+        value = 0
+        if sensor_type == "air_temperature":
+            value = random.randint(18, 28)
+        elif sensor_type == "humidity":
+            value = random.randint(25, 65)
+        elif sensor_type == "co2_level":
+            value = random.randint(400, 1200)
+        elif sensor_type == "loudness":
+            value = random.randint(30, 70)
+        elif sensor_type == "dew_point":
+            value = random.randint(5, 15)
+        elif sensor_type == "volatile_organic_compound_level":
+            value = random.randint(0, 1000)
+        elif sensor_type == "illuminance":
+            value = random.randint(0, 1000)
+        elif sensor_type == "ultraviolet":
+            value = random.randint(0, 11)
+        elif sensor_type == "smoke_density":
+            value = random.randint(0, 5)
+        elif sensor_type == "binary":
+            value = random.randint(0, 1)
+        
+        data['y'].append(value)
+        current_time += 3600
+
+    return data
+
+def get_sensors_list_for_room(room, location):
+    if location == IUT_LOCATION:
+        if room not in IUT_ROOMS:
+            return None
+        return list(IUT_SENSORS[room].keys())
+    else: 
+        if room not in TETRAS_ROOMS:
+            return None
+        return list(TETRAS_SENSORS[room].keys())
+
+def get_sensor_data(sensor_id, location):
+    if location == IUT_LOCATION:
+        room = next((room for room in IUT_ROOMS if sensor_id.startswith(room)), None)
+        if not room or sensor_id not in IUT_SENSORS[room]:
+            return None
+    else:
+        room = next((room for room in TETRAS_ROOMS if sensor_id.startswith(room)), None)
+        if not room or sensor_id not in TETRAS_SENSORS[room]:
+            return None
+    
+    sensor_type = sensor_id.split('_', 1)[1]
+    measurement = next((m for t, m in TYPESENSOR if t == sensor_type), None)
+    
+    if measurement is None:
+        return None
+        
+    data = generate_sensor_data(sensor_type)
+    
+    return {
+        'measurement': measurement,
+        'discomfort': detect_discomfort(sensor_id, data['y'][-1]),
+        'x': data['x'],
+        'y': data['y']
+    }
 
 def detect_discomfort(name, value):
     discomfort = {"status": False, "causes": None}

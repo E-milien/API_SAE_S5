@@ -18,7 +18,7 @@ L'API utilise les technologies suivantes :
 ### Variables d'environnement
 L'API se connecte à InfluxDB avec les paramètres suivants :
 ```python
-url="http://10.103.1.44:5003"
+url="http://votre_ip:5001"
 org="DomoCorp"
 ```
 
@@ -150,6 +150,10 @@ Vérifie si une pièce est occupée.
 }
 ```
 
+## Paramètres GET 
+
+Pour toutes les routes il y a un paramètre GET tel que location=tetras, qui prend comme valeur par default iut pour récupérer les données en fonction d'un batiment
+
 ## Gestion des erreurs
 
 L'API renvoie des codes d'erreur HTTP appropriés :
@@ -168,13 +172,13 @@ Chaque erreur inclut un message explicatif :
 
 ```python
 # Récupérer les données d'un capteur sur les dernières 24h
-GET /api/sensor/d251_1_multisensor_temperature?range=-24h
+GET /api/sensor/d251_1_multisensor_temperature?range=-24h&location=iut
 
 # Lister tous les capteurs d'une pièce
 GET /api/room/d251/sensor-list
 
 # Vérifier l'occupation d'une pièce
-GET /api/room/d251/occupancy
+GET /api/room/d251/occupancy?location=tetras
 ```
 
 ## Note sur l'agrégation des données
