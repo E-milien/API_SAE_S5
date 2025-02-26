@@ -8,15 +8,48 @@ app = Flask(__name__)
 IUT_LOCATION = "iut"
 TETRAS_LOCATION = "tetras"
 
-IUT_ROOMS = ["d251", "d351", "d360"]
+IUT_ROOMS = ["D251", "D351", "D360"]
 TETRAS_ROOMS = ["02", "11", "19"]
 
 THRESHOLDS = {
-    "co2_level": 1000,
-    "temperature": (20, 26),
-    "humidity": (30, 60),
-    "loudness": 50,
-    "smoke_density": 0
+    "co2_level": {
+        "normal": 1000,
+        "faible": (1000, 1200),
+        "moyen": (1200, 1400),
+        "fort": 1400,
+    },
+    "air_temperature": {
+        "normal": (20, 26),
+        "faible": ((18, 20), (26, 28)),
+        "moyen": ((16, 18), (28, 30)),
+        "fort": (16, 30),
+    },
+    "humidity": {
+        "normal": (30, 60),
+        "faible": ((25, 30), (60, 65)),
+        "moyen": ((20, 25), (65, 70)),
+        "fort": (20, 70),
+    },
+    "loudness": {
+        "normal": 50,
+        "faible": (50, 65),
+        "moyen": (65, 80),
+        "fort": 80,
+    },
+    "smoke_density": {
+        "normal": 0,
+        "faible": (0, 10),
+        "moyen": (10, 20),
+        "fort": 20,
+    }
+}
+
+SENSOR_NAMES_FR = {
+    "co2_level": "Niveau de CO2",
+    "air_temperature": "Température",
+    "humidity": "Humidité",
+    "loudness": "Niveau sonore",
+    "smoke_density": "Densité de fumée"
 }
 
 TYPESENSOR = [
@@ -139,38 +172,52 @@ def get_room_occuped(room):
             is_occupied = True
     return jsonify(is_occupied), 200
 
-def generate_sensor_data(sensor_type, days=30):
+@app.route("/api/prediction/<room>")
+def get_prediction(room):
+    data = generate_sensor_data(sensor_type=TYPESENSOR[0][0], days=15, future=True)
+    output = {
+        'x': data['x'],
+        'y': data['y']
+        }
+    return jsonify(output), 200
+
+def generate_sensor_data(sensor_type, days=30, future=False):
     data = {
         'x': [],
         'y': []
     }
     
-    end_time = time.time()
-    start_time = end_time - (days * 24 * 60 * 60)
-    
-    current_time = start_time
+    if future:
+        start_time = time.time()
+        end_time = start_time + (days * 24 * 60 * 60)
+        current_time = start_time
+    else:
+        end_time = time.time()
+        start_time = end_time - (days * 24 * 60 * 60)
+        current_time = start_time
+
     while current_time < end_time:
         data['x'].append(current_time)
         
         value = 0
         if sensor_type == "air_temperature":
-            value = random.randint(18, 28)
+            value = random.randint(5, 50)
         elif sensor_type == "humidity":
-            value = random.randint(25, 65)
+            value = random.randint(10, 80)
         elif sensor_type == "co2_level":
-            value = random.randint(400, 1200)
+            value = random.randint(300, 1500)
         elif sensor_type == "loudness":
-            value = random.randint(30, 70)
+            value = random.randint(20, 100)
         elif sensor_type == "dew_point":
-            value = random.randint(5, 15)
+            value = random.randint(0, 25)
         elif sensor_type == "volatile_organic_compound_level":
-            value = random.randint(0, 1000)
+            value = random.randint(0, 1500)
         elif sensor_type == "illuminance":
-            value = random.randint(0, 1000)
+            value = random.randint(0, 1500)
         elif sensor_type == "ultraviolet":
-            value = random.randint(0, 11)
+            value = random.randint(0, 20)
         elif sensor_type == "smoke_density":
-            value = random.randint(0, 5)
+            value = random.randint(0, 10)
         elif sensor_type == "binary":
             value = random.randint(0, 1)
         
@@ -214,32 +261,56 @@ def get_sensor_data(sensor_id, location):
         'y': data['y']
     }
 
-def detect_discomfort(name, value):
-    discomfort = {"status": False, "causes": None}
+def detect_discomfort(sensor_id, value):
+    name = sensor_id.split('_', 1)[1]
+    discomfort = {"status": False, "causes": None, "intensity": 0}
 
-    if 'co2_level' in name:
-        if value > THRESHOLDS["co2_level"]:
-            discomfort["status"] = True
-            discomfort["causes"] = "CO2 élevé"
-    elif 'air_temperature' in name:
-        if value < THRESHOLDS["temperature"][0] or value > THRESHOLDS["temperature"][1]:
-            discomfort["status"] = True
-            discomfort["causes"] = "Température inconfortable"
-    elif 'humidity' in name:
-        if value < THRESHOLDS["humidity"][0] or value > THRESHOLDS["humidity"][1]:
-            discomfort["status"] = True
-            discomfort["causes"] = "Humidité inconfortable"
-    elif 'loudness' in name:
-        if value > THRESHOLDS["loudness"]:
-            discomfort["status"] = True
-            discomfort["causes"] = "Niveau de bruit élevé"
-    elif 'smoke_density' in name: 
-        if value > THRESHOLDS["smoke_density"]:
-            discomfort["status"] = True
-            discomfort["causes"] = "Densité de fumée trop élevé"
+    name_fr = SENSOR_NAMES_FR.get(name, name)
 
+    if name in THRESHOLDS:
+        thresholds = THRESHOLDS[name]
 
+        if isinstance(thresholds["normal"], tuple):
+            if thresholds["normal"][0] <= value <= thresholds["normal"][1]:
+                return discomfort
+        elif isinstance(thresholds["normal"], int):
+            if value <= thresholds["normal"]:
+                return discomfort
+        
+        if isinstance(thresholds["faible"], tuple):
+            if isinstance(thresholds["faible"][0], tuple):
+                range1, range2 = thresholds["faible"]
+                if (range1[0] <= value <= range1[1]) or (range2[0] <= value <= range2[1]):
+                    discomfort.update({"status": True, "causes": f"{name_fr} légèrement élevé", "intensity": 1})
+                    return discomfort
+            else:
+                if thresholds["faible"][0] <= value <= thresholds["faible"][1]:
+                    discomfort.update({"status": True, "causes": f"{name_fr} légèrement élevé", "intensity": 1})
+                    return discomfort
+        
+        if isinstance(thresholds["moyen"], tuple):
+            if isinstance(thresholds["moyen"][0], tuple):
+                range1, range2 = thresholds["moyen"]
+                if (range1[0] <= value <= range1[1]) or (range2[0] <= value <= range2[1]):
+                    discomfort.update({"status": True, "causes": f"{name_fr} modérément élevé", "intensity": 2})
+                    return discomfort
+            else:
+                if thresholds["moyen"][0] <= value <= thresholds["moyen"][1]:
+                    discomfort.update({"status": True, "causes": f"{name_fr} modérément élevé", "intensity": 2})
+                    return discomfort
+        
+        if isinstance(thresholds["fort"], tuple):
+            if value < thresholds["fort"][0] or value > thresholds["fort"][1]:
+                discomfort.update({"status": True, "causes": f"{name_fr} très élevé", "intensity": 3})
+                return discomfort
+        elif isinstance(thresholds["fort"], int):
+            if value >= thresholds["fort"]:
+                discomfort.update({"status": True, "causes": f"{name_fr} très élevé", "intensity": 3})
+                return discomfort
+        
     return discomfort
+
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
