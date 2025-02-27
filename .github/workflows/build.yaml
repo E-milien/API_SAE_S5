@@ -1,0 +1,17 @@
+name: Main Workflow
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    uses: ./docker-build-push.yml@main
+    with:
+      registry: ${{ vars.HARBOR_REGISTRY }}
+      image-name: private/sae-api
+      image-tag: main-${{ github.sha }}-${{ github.run_number }}
+    secrets:
+      REGISTRY_TOKEN: ${{ vars.HARBOR_TOKEN }}
