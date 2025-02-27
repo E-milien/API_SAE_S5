@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sae-api
+  labels:
+    app: sae-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sae-api
+  template:
+    metadata:
+      name: sae-api
+      labels:
+        app: sae-api
+    spec:
+      containers:
+        - name: sae-api
+          image: sae_api_image
+          envFrom:
+            - configMapRef:
+                name: sae-api
+
+      imagePullSecrets:
+        - name: registry-secret
