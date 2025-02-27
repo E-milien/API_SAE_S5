@@ -7,4 +7,4 @@ resources:
 images:
   - name: sae_api_image
     newName: harbor.server.dylanbattig.fr/private/sae-api # {"$imagepolicy": "flux-system:sae-api:name"}
-    newTag: main-ea900f6c83258a81a21b426399deb23b805a0efe-9 # {"$imagepolicy": "flux-system:sae-api:tag"}
+    newTag: main-fc5e763afb8a4aaa772cc69368454a8224f97ffe-11 # {"$imagepolicy": "flux-system:sae-api:tag"}
