@@ -5,6 +5,8 @@ import time
 
 app = Flask(__name__)
 
+TEST_ALERT=True
+
 IUT_LOCATION = "iut"
 TETRAS_LOCATION = "tetras"
 
@@ -14,20 +16,20 @@ TETRAS_ROOMS = ["02", "11", "19"]
 THRESHOLDS = {
     "co2_level": {
         "normal": 1000,
-        "faible": (1000, 1200),
-        "moyen": (1200, 1400),
-        "fort": 1400,
+        "faible": (1000, 1500),
+        "moyen": (1500, 2000),
+        "fort": 2000,
     },
     "air_temperature": {
-        "normal": (20, 26),
-        "faible": ((18, 20), (26, 28)),
-        "moyen": ((16, 18), (28, 30)),
-        "fort": (16, 30),
+        "normal": (20, 24),
+        "faible": ((18, 20), (24, 26)),
+        "moyen": ((16, 18), (26, 28)),
+        "fort": (16, 28),
     },
     "humidity": {
-        "normal": (30, 60),
-        "faible": ((25, 30), (60, 65)),
-        "moyen": ((20, 25), (65, 70)),
+        "normal": (40, 60),
+        "faible": ((30, 40), (60, 65)),
+        "moyen": ((20, 30), (65, 70)),
         "fort": (20, 70),
     },
     "loudness": {
@@ -38,9 +40,9 @@ THRESHOLDS = {
     },
     "smoke_density": {
         "normal": 0,
-        "faible": (0, 10),
-        "moyen": (10, 20),
-        "fort": 20,
+        "faible": (0, 5),
+        "moyen": (5, 10),
+        "fort": 10,
     }
 }
 
@@ -200,26 +202,49 @@ def generate_sensor_data(sensor_type, days=30, future=False):
         data['x'].append(current_time)
         
         value = 0
-        if sensor_type == "air_temperature":
-            value = random.randint(5, 50)
-        elif sensor_type == "humidity":
-            value = random.randint(10, 80)
-        elif sensor_type == "co2_level":
-            value = random.randint(300, 1500)
-        elif sensor_type == "loudness":
-            value = random.randint(20, 100)
-        elif sensor_type == "dew_point":
-            value = random.randint(0, 25)
-        elif sensor_type == "volatile_organic_compound_level":
-            value = random.randint(0, 1500)
-        elif sensor_type == "illuminance":
-            value = random.randint(0, 1500)
-        elif sensor_type == "ultraviolet":
-            value = random.randint(0, 20)
-        elif sensor_type == "smoke_density":
-            value = random.randint(0, 10)
-        elif sensor_type == "binary":
-            value = random.randint(0, 1)
+
+        if TEST_ALERT:
+            if sensor_type == "air_temperature":
+                value = random.randint(12, 32)
+            elif sensor_type == "humidity":
+                value = random.randint(10, 80)
+            elif sensor_type == "co2_level":
+                value = random.randint(300, 3000)
+            elif sensor_type == "loudness":
+                value = random.randint(20, 100)
+            elif sensor_type == "dew_point":
+                value = random.randint(0, 15)
+            elif sensor_type == "volatile_organic_compound_level":
+                value = random.randint(0, 1500)
+            elif sensor_type == "illuminance":
+                value = random.randint(0, 1000)
+            elif sensor_type == "ultraviolet":
+                value = random.randint(0, 9)
+            elif sensor_type == "smoke_density":
+                value = random.randint(0, 10)
+            elif sensor_type == "binary":
+                value = random.randint(0, 1)
+        else:
+            if sensor_type == "air_temperature":
+                value = random.randint(17, 26)
+            elif sensor_type == "humidity":
+                value = random.randint(25, 70)
+            elif sensor_type == "co2_level":
+                value = random.randint(300, 1500)
+            elif sensor_type == "loudness":
+                value = random.randint(20, 80)
+            elif sensor_type == "dew_point":
+                value = random.randint(0, 15)
+            elif sensor_type == "volatile_organic_compound_level":
+                value = random.randint(0, 1500)
+            elif sensor_type == "illuminance":
+                value = random.randint(0, 1000)
+            elif sensor_type == "ultraviolet":
+                value = random.randint(0, 7)
+            elif sensor_type == "smoke_density":
+                value = random.randint(0, 5)
+            elif sensor_type == "binary":
+                value = random.randint(0, 1)
         
         data['y'].append(value)
         current_time += 3600
