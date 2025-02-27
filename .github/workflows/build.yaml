@@ -8,7 +8,7 @@ on:
 
 jobs:
   deploy:
-    uses: ./docker-build-push.yml@main
+    uses: E-milien/API_SAE_S5/.github/workflows/docker-build-push.yml@main
     with:
       registry: ${{ vars.HARBOR_REGISTRY }}
       image-name: private/sae-api
