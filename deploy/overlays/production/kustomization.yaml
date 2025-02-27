@@ -6,5 +6,5 @@ resources:
   - ./ingress.yaml
 images:
   - name: sae_api_image
-    newName: harbor.server.dylanbattig.fr/private/sae_api # {"$imagepolicy": "flux-system:sae-api:name"}
-    newTag: main # {"$imagepolicy": "flux-system:sae-api:tag"}
+    newName: harbor.server.dylanbattig.fr/private/sae-api # {"$imagepolicy": "flux-system:sae-api:name"}
+    newTag: main-ea900f6c83258a81a21b426399deb23b805a0efe-9 # {"$imagepolicy": "flux-system:sae-api:tag"}
