@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: sae
 resources:
   - ../../bases
+  - ./ingress.yaml
 images:
   - name: sae_api_image
     newName: harbor.server.dylanbattig.fr/private/sae_api # {"$imagepolicy": "flux-system:sae-api:name"}

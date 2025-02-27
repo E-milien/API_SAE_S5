@@ -18,6 +18,10 @@ spec:
       containers:
         - name: sae-api
           image: sae_api_image
+          ports:
+            - name: main
+              containerPort: 3000
+              protocol: TCP
           envFrom:
             - configMapRef:
                 name: sae-api

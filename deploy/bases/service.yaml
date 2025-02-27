@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sae-api
+spec:
+  selector:
+    app: sae-api
+  ports:
+    - name: main
+      port: 3000
+      targetPort: main
+      protocol: TCP
+  type: ClusterIP
