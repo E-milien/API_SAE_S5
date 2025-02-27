@@ -22,9 +22,5 @@ spec:
             - name: main
               containerPort: 3000
               protocol: TCP
-          envFrom:
-            - configMapRef:
-                name: sae-api
-
       imagePullSecrets:
         - name: registry-secret
