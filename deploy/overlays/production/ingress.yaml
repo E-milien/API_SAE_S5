@@ -22,4 +22,4 @@ spec:
               service:
                 name: sae-api
                 port:
-                  name: http
+                  name: main
