@@ -2,6 +2,8 @@ FROM python
 
 WORKDIR /app
 
+ADD . .
+
 RUN pip install flask
 RUN pip install influxdb-client
 
