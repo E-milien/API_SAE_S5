@@ -8,7 +8,7 @@ on:
 
 jobs:
   deploy:
-    uses: ./docker-build-template.yaml@main
+    uses: E-milien/API_SAE_S5/docker-build-template.yaml@main
     with:
       registry: ${{ vars.HARBOR_REGISTRY }}
       image-name: private/sae-api
